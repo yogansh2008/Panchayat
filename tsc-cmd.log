@@ -1,0 +1,5 @@
+app/emergency.tsx(4,64): error TS2305: Module '"lucide-react-native"' has no exported member 'Tool'.
+lib/firestore.ts(116,44): error TS2698: Spread types may only be created from object types.
+lib/firestore.ts(169,5): error TS7006: Parameter 'snap' implicitly has an 'any' type.
+lib/firestore.ts(169,36): error TS7006: Parameter 'd' implicitly has an 'any' type.
+lib/firestore.ts(170,5): error TS7006: Parameter 'err' implicitly has an 'any' type.
