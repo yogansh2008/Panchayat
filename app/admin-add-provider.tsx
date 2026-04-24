@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, FlatList, Alert, ActivityIndicator, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
 import { ArrowLeft, Wrench, UserPlus, Star, MapPin } from 'lucide-react-native';
-import { subscribeToData, addDocument, deleteDocument, COLLECTIONS } from '../lib/firestore';
+import { subscribeToData, addDocument, deleteDocument, COLLECTIONS } from '../backend/db/firestore';
+import { useAuth } from '../frontend/context/AuthContext';
 
 const CATEGORIES = ['Plumber', 'Electrician', 'Cleaner', 'Carpenter', 'Doctor', 'Grocery', 'Security', 'Other'];
 
@@ -17,19 +18,24 @@ export default function AdminAddProviderScreen() {
   const [location, setLocation] = useState('');
   const [category, setCategory] = useState('Plumber');
 
+  const { profile } = useAuth();
+  const societyId = profile?.societyId || '';
+
   useEffect(() => {
+    if (!societyId) { setLoading(false); return; }
     const unsub = subscribeToData(COLLECTIONS.SERVICES, (data) => {
       setProviders(data);
       setLoading(false);
-    });
+    }, [{ field: 'societyId', op: '==', value: societyId }]);
     return () => unsub();
-  }, []);
+  }, [societyId]);
 
   const handleAdd = async () => {
     if (!name || !phone || !location) return Alert.alert('Required', 'All fields are required');
+    if (!societyId) return Alert.alert('Error', 'No society linked');
     setSaving(true);
     try {
-      await addDocument(COLLECTIONS.SERVICES, { name, phone, location, category, rating: 5.0, available: true });
+      await addDocument(COLLECTIONS.SERVICES, { name, phone, location, category, rating: 5.0, available: true, societyId });
       setName(''); setPhone(''); setLocation(''); setCategory('Plumber');
       Alert.alert('✅ Added', `${name} has been added to the services directory.`);
     } catch (e: any) { Alert.alert('Error', e.message); }

@@ -2,32 +2,36 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { ArrowLeft, DollarSign, TrendingUp, TrendingDown } from 'lucide-react-native';
-import { subscribeToData, addDocument, COLLECTIONS } from '../lib/firestore';
+import { subscribeFundEntries, addFundEntry } from '../backend/db/firestore';
+import { useAuth } from '../frontend/context/AuthContext';
 
 export default function AdminFundsScreen() {
   const router = useRouter();
+  const { profile } = useAuth();
+  const societyId = profile?.societyId || '';
   const [funds, setFunds] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-
   const [desc, setDesc] = useState('');
   const [amount, setAmount] = useState('');
   const [type, setType] = useState<'income' | 'expense'>('income');
 
   useEffect(() => {
-    const unsub = subscribeToData(COLLECTIONS.FUNDS, (data) => {
+    if (!societyId) return;
+    const unsub = subscribeFundEntries(societyId, (data) => {
       setFunds(data);
       setLoading(false);
     });
     return () => unsub();
-  }, []);
+  }, [societyId]);
 
   const handleAdd = async () => {
-    if (!desc || !amount) return Alert.alert("Required", "Please fill description and amount");
+    if (!desc || !amount) return Alert.alert('Required', 'Please fill description and amount');
+    if (!societyId) return Alert.alert('Error', 'No society linked.');
     try {
-      await addDocument(COLLECTIONS.FUNDS, { description: desc, amount: parseFloat(amount), type, date: new Date().toISOString() });
+      await addFundEntry(societyId, { description: desc, amount: parseFloat(amount), type });
       setDesc(''); setAmount('');
-    } catch {
-      Alert.alert("Error", "Could not submit ledger entry");
+    } catch (e: any) {
+      Alert.alert('Error', e.message || 'Could not submit ledger entry');
     }
   };
 

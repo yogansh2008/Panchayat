@@ -1,35 +1,42 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
-import { ArrowLeft, Calendar, Save } from 'lucide-react-native';
-import { subscribeToData, addDocument, COLLECTIONS } from '../lib/firestore';
+import { ArrowLeft, Calendar, Save, Trash2 } from 'lucide-react-native';
+import { subscribeToEvents, createEvent, deleteEvent } from '../backend/db/firestore';
+import { useAuth } from '../frontend/context/AuthContext';
 
 export default function AdminEventsScreen() {
   const router = useRouter();
+  const { profile } = useAuth();
+  const societyId = profile?.societyId || '';
   const [events, setEvents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-
   const [title, setTitle] = useState('');
   const [desc, setDesc] = useState('');
   const [date, setDate] = useState('');
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    const unsub = subscribeToData(COLLECTIONS.EVENTS, (data) => {
+    if (!societyId) return;
+    const unsub = subscribeToEvents(societyId, (data) => {
       setEvents(data);
       setLoading(false);
     });
     return () => unsub();
-  }, []);
+  }, [societyId]);
 
   const handleCreate = async () => {
-    if (!title || !desc || !date) return Alert.alert("Required", "All fields are required");
+    if (!title || !desc || !date) return Alert.alert('Required', 'All fields are required');
+    if (!societyId) return Alert.alert('Error', 'No society linked. Please create a society first.');
+    setSaving(true);
     try {
-      await addDocument(COLLECTIONS.EVENTS, { title, desc, date });
+      await createEvent(societyId, { title, desc, date });
       setTitle(''); setDesc(''); setDate('');
-      Alert.alert("Success", "Event broadcasted to all residents");
-    } catch {
-      Alert.alert("Error", "Could not create event");
+      Alert.alert('✅ Published', 'Event broadcast to all residents');
+    } catch (e: any) {
+      Alert.alert('Error', e.message || 'Could not create event');
     }
+    setSaving(false);
   };
 
   return (
@@ -53,8 +60,15 @@ export default function AdminEventsScreen() {
           </TouchableOpacity>
         </View>
 
-        <Text style={styles.sectionTitle}>Active Events</Text>
-        {loading ? <ActivityIndicator color="#0d9488" /> : events.map(e => (
+        <Text style={styles.sectionTitle}>Active Events ({events.length})</Text>
+        {loading ? (
+          <ActivityIndicator color="#0d9488" size="large" style={{ marginTop: 32 }} />
+        ) : events.length === 0 ? (
+          <View style={{ alignItems: 'center', paddingVertical: 48 }}>
+            <Text style={{ color: '#6b7280', fontSize: 15, fontWeight: '600' }}>No events yet.</Text>
+            <Text style={{ color: '#9ca3af', fontSize: 13, marginTop: 6 }}>Post the first one above ↑</Text>
+          </View>
+        ) : events.map(e => (
           <View key={e.id} style={styles.eventCard}>
             <View style={styles.eDateBox}>
               <Text style={styles.eDateText}>{e.date?.split(' ')[0]}</Text>
@@ -67,6 +81,9 @@ export default function AdminEventsScreen() {
                 <Text style={styles.eMeta}> {e.date}</Text>
               </View>
             </View>
+            <TouchableOpacity onPress={() => deleteEvent(e.id)} style={{ padding: 8 }}>
+              <Trash2 color="#ef444470" size={18} />
+            </TouchableOpacity>
           </View>
         ))}
       </ScrollView>

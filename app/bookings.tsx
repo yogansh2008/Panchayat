@@ -2,22 +2,26 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, FlatList, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { ArrowLeft, Clock } from 'lucide-react-native';
-import { fetchData, subscribeToData, COLLECTIONS } from '../lib/firestore';
-import { db } from '../lib/firebase';
+import { fetchData, subscribeToData, COLLECTIONS } from '../backend/db/firestore';
+import { db } from '../backend/config/firebase';
 import { doc, updateDoc } from 'firebase/firestore';
+import { useAuth } from '../frontend/context/AuthContext';
 
 export default function BookingsScreen() {
   const router = useRouter();
   const [facilities, setFacilities] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const { profile } = useAuth();
+  const societyId = profile?.societyId || '';
 
   useEffect(() => {
+    if (!societyId) { setLoading(false); return; }
     const unsub = subscribeToData(COLLECTIONS.FACILITIES, (data) => {
       setFacilities(data);
       setLoading(false);
-    });
+    }, [{ field: 'societyId', op: '==', value: societyId }]);
     return () => unsub();
-  }, []);
+  }, [societyId]);
 
   const handleBook = async (id: string, currentStatus: string) => {
     if (currentStatus !== 'Available') return;

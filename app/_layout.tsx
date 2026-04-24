@@ -1,6 +1,5 @@
 import { Stack, useRouter, useSegments } from 'expo-router';
-import { AuthProvider, useAuth } from '../context/AuthContext';
-import { seedDatabase } from '../lib/firestore';
+import { AuthProvider, useAuth } from '../frontend/context/AuthContext';
 import { useEffect } from 'react';
 import { View, ActivityIndicator } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
@@ -8,36 +7,35 @@ import { StatusBar } from 'expo-status-bar';
 function ProtectedLayout() {
   const { user, profile, isLoading } = useAuth();
   const segments = useSegments();
-  const router = useRouter();
-
-  useEffect(() => {
-    seedDatabase();
-  }, []);
+  const router   = useRouter();
 
   useEffect(() => {
     if (isLoading) return;
 
-    const inAuthGroup = segments[0] === '(auth)';
+    const inAuth    = segments[0] === '(auth)';
     const inPending = segments[0] === 'pending-approval';
 
-    if (!user && !inAuthGroup) {
+    if (!user && !inAuth) {
       router.replace('/(auth)');
-    } else if (user && profile && inAuthGroup) {
-      if (profile.role === 'Admin') {
-        router.replace('/admin');
-      } else if (profile.role === 'Provider') {
-        router.replace('/provider');
-      } else if (profile.role === 'Security') {
-        router.replace('/security');
-      } else if (profile.role === 'Pending') {
-        router.replace('/pending-approval');
-      } else {
-        router.replace('/(tabs)');
+      return;
+    }
+
+    if (user && !profile) return; // wait for profile load
+
+    if (user && profile && inAuth) {
+      // Admin and Resident both go to (tabs) — home screen detects role
+      switch (profile.role) {
+        case 'Provider': router.replace('/provider');         break;
+        case 'Security': router.replace('/security');         break;
+        case 'Pending':  router.replace('/pending-approval'); break;
+        default:         router.replace('/(tabs)');           break; // Admin + Resident
       }
-    } else if (user && profile?.role === 'Pending' && !inPending) {
+    }
+
+    if (user && profile?.role === 'Pending' && !inPending) {
       router.replace('/pending-approval');
     }
-  }, [user, profile, isLoading, segments]);
+  }, [user, profile, isLoading]);
 
   if (isLoading) {
     return (
@@ -60,6 +58,7 @@ function ProtectedLayout() {
       <Stack.Screen name="pending-approval" />
       <Stack.Screen name="provider" />
       <Stack.Screen name="security" />
+      <Stack.Screen name="admin-security" />
       <Stack.Screen name="admin-residents" />
       <Stack.Screen name="admin-complaints" />
       <Stack.Screen name="admin-funds" />
@@ -68,6 +67,7 @@ function ProtectedLayout() {
       <Stack.Screen name="admin-notices" />
       <Stack.Screen name="ai-assistant" />
       <Stack.Screen name="rules" />
+      <Stack.Screen name="admin-gatepasses" />
       <Stack.Screen name="visitors" />
     </Stack>
   );

@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
-import { ArrowLeft, Users, FileText, AlertOctagon, TrendingUp, TrendingDown, Settings, DollarSign, Wrench, Building, Calendar, Megaphone, LogOut, BookOpen, UserPlus, Clock, MessageSquare } from 'lucide-react-native';
-import { auth } from '../lib/firebase';
-import { subscribeAdminStats, subscribeToData, subscribePendingResidents, COLLECTIONS } from '../lib/firestore';
-import { useAuth } from '../context/AuthContext';
+import { ArrowLeft, Users, FileText, AlertOctagon, TrendingUp, TrendingDown, Settings, DollarSign, Wrench, Building, Calendar, Megaphone, LogOut, BookOpen, UserPlus, Clock, MessageSquare, Shield } from 'lucide-react-native';
+import { auth } from '../backend/config/firebase';
+import { subscribeAdminStats, subscribeToData, subscribePendingResidents, COLLECTIONS } from '../backend/db/firestore';
+import { useAuth } from '../frontend/context/AuthContext';
 
 export default function AdminDashboardScreen() {
   const router = useRouter();
@@ -16,13 +16,14 @@ export default function AdminDashboardScreen() {
   const [pendingCount, setPendingCount] = useState(0);
 
   useEffect(() => {
-    const unsubStats = subscribeAdminStats((s) => { setStats(s); setLoading(false); });
+    if (!profile?.societyId) return;
+    const unsubStats = subscribeAdminStats(profile.societyId, (s) => { setStats(s); setLoading(false); });
     const unsubFunds = subscribeToData(COLLECTIONS.FUNDS, (data) => {
       setIncome(data.filter(f => f.type === 'income').reduce((a, c) => a + (c.amount || 0), 0));
       setExpenses(data.filter(f => f.type === 'expense').reduce((a, c) => a + (c.amount || 0), 0));
-    });
+    }, [{ field: 'societyId', op: '==', value: profile.societyId }]);
     return () => { unsubStats(); unsubFunds(); };
-  }, []);
+  }, [profile?.societyId]);
 
   useEffect(() => {
     if (!profile?.societyCode) return;
@@ -93,6 +94,7 @@ export default function AdminDashboardScreen() {
       <View style={styles.actionGrid}>
         {[
           { icon: Building,      label: 'Society Setup',       route: '/admin-society',       badge: 0 },
+          { icon: Shield,        label: 'Security Setup',      route: '/admin-security',      badge: 0 },
           { icon: Clock,         label: 'Pending Requests',    route: '/admin-requests',      badge: pendingCount },
           { icon: Users,         label: 'Residents',           route: '/admin-residents',     badge: 0 },
           { icon: UserPlus,      label: 'Add Provider',        route: '/admin-add-provider',  badge: 0 },

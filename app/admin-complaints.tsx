@@ -2,26 +2,27 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { ArrowLeft, AlertOctagon, CheckCircle } from 'lucide-react-native';
-import { subscribeToData, COLLECTIONS } from '../lib/firestore';
-import { db } from '../lib/firebase';
-import { doc, updateDoc } from 'firebase/firestore';
+import { subscribeToComplaints, updateComplaintStatus } from '../backend/db/firestore';
+import { useAuth } from '../frontend/context/AuthContext';
 
 export default function AdminComplaintsScreen() {
   const router = useRouter();
+  const { profile } = useAuth();
+  const societyId = profile?.societyId || '';
   const [complaints, setComplaints] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsub = subscribeToData(COLLECTIONS.COMPLAINTS, (data) => {
-      setComplaints(data.sort((a, b) => (a.status === 'Resolved' ? 1 : -1)));
+    if (!societyId) return;
+    const unsub = subscribeToComplaints(societyId, (data) => {
+      setComplaints([...data].sort((a, b) => (a.status === 'Resolved' ? 1 : -1)));
       setLoading(false);
     });
     return () => unsub();
-  }, []);
+  }, [societyId]);
 
-  const markResolved = async (id: string) => {
-    await updateDoc(doc(db, COLLECTIONS.COMPLAINTS, id), { status: 'Resolved' });
-  };
+  const markResolved = (id: string) => updateComplaintStatus(id, 'Resolved');
+  const markInProgress = (id: string) => updateComplaintStatus(id, 'In Progress');
 
   return (
     <View style={styles.container}>

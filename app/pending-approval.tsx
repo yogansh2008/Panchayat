@@ -2,8 +2,8 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Clock, LogOut } from 'lucide-react-native';
-import { auth } from '../lib/firebase';
-import { useAuth } from '../context/AuthContext';
+import { auth } from '../backend/config/firebase';
+import { useAuth } from '../frontend/context/AuthContext';
 
 export default function PendingApprovalScreen() {
   const { profile } = useAuth();

@@ -39,3 +39,21 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+node_modules
+.expo
+dist
+build
+*.log
+.env
+
+# Ignore system files
+AppData/
+*.ldb
+*.log
+
+# Expo
+.expo-shared
+
+# OS
+.DS_Store
+Thumbs.db

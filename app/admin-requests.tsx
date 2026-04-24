@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, FlatList, Alert, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { ArrowLeft, UserCheck, UserX, Clock } from 'lucide-react-native';
-import { useAuth } from '../context/AuthContext';
-import { subscribePendingResidents, approveResident, rejectResident, subscribeToData, COLLECTIONS } from '../lib/firestore';
+import { useAuth } from '../frontend/context/AuthContext';
+import { subscribePendingResidents, approveResident, rejectResident, subscribeToData, COLLECTIONS } from '../backend/db/firestore';
 
 export default function AdminRequestsScreen() {
   const router = useRouter();

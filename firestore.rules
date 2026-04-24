@@ -1,0 +1,154 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── Societies: public read so that residents can validate
+    //    a society code BEFORE they create their account.
+    match /societies/{societyId} {
+      allow read: if true;
+      // Allow write if user is Admin OR if they have no role yet (first-time society creation)
+      allow write: if request.auth != null
+                   && (
+                     !exists(/databases/$(database)/documents/users/$(request.auth.uid))
+                     || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Admin'
+                   );
+    }
+
+    // ── Users: each user can read/write their own doc.
+    //    Admin can read all users in their society.
+    match /users/{userId} {
+      // Allow user to read & write their OWN doc (includes first-time signup)
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+      // Admin can read all users
+      allow read: if request.auth != null
+                  && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Admin';
+    }
+
+    // ── Pending residents: admin and the pending user itself
+    match /pending_residents/{uid} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+      allow read, write: if request.auth != null
+                         && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Admin';
+    }
+
+    // ── Society floors: admin write, all authenticated can read
+    match /society_floors/{docId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null
+                   && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Admin';
+    }
+
+    // ── Bills: residents read own flat, admin full access
+    match /bills/{billId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null
+                   && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Admin';
+    }
+
+    // ── Events: all authenticated can read, only admin writes
+    match /events/{eventId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null
+                   && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Admin';
+    }
+
+    // ── Notices: all authenticated can read, only admin writes
+    match /notices/{noticeId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null
+                   && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Admin';
+    }
+
+    // ── Guidelines: all authenticated can read, only admin writes
+    match /guidelines/{guidelineId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null
+                   && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Admin';
+    }
+
+    // ── Complaints: residents can submit + read own, admin reads/manages all
+    match /complaints/{complaintId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null;
+      allow update, delete: if request.auth != null
+                            && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Admin';
+    }
+
+    // ── Visitor passes: residents create + read, security + admin can update
+    match /visitors/{visitorId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null;
+      allow update: if request.auth != null
+                    && (
+                       get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Security'
+                    || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Admin'
+                    );
+    }
+
+    // ── Service requests: residents create, providers update, admin full
+    match /service_requests/{reqId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null;
+      allow update: if request.auth != null
+                    && (
+                       get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Provider'
+                    || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Admin'
+                    );
+    }
+
+    // ── Services directory: read for all, write for admin only
+    match /services/{serviceId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null
+                   && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Admin';
+    }
+
+    // ── Funds ledger: admin only
+    match /funds/{fundId} {
+      allow read, write: if request.auth != null
+                         && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Admin';
+    }
+
+    // ── Facilities / bookings: all authenticated can read + create bookings
+    match /facilities/{facilityId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null;
+    }
+
+    // ── Rules: all authenticated can read, admin writes
+    match /rules/{ruleId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null
+                   && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Admin';
+    }
+    // ── Rooms: admin writes, authenticated residents read own society
+    match /rooms/{roomId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null
+                   && (
+                     !exists(/databases/$(database)/documents/users/$(request.auth.uid))
+                     || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Admin'
+                   );
+    }
+
+    // ── Gate Passes: residents create, security/admin manage, all society members read
+    match /gatepasses/{passId} {
+      // Any authenticated user can read (filtered by societyId in queries)
+      allow read: if request.auth != null;
+      // Residents can create their own gate pass
+      allow create: if request.auth != null;
+      // Security and Admin can update status; resident can delete their own
+      allow update: if request.auth != null
+                    && (
+                       get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Security'
+                    || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Admin'
+                    || request.auth.uid == resource.data.residentId
+                    );
+      allow delete: if request.auth != null
+                    && (
+                       request.auth.uid == resource.data.residentId
+                    || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Admin'
+                    );
+    }
+  }
+}

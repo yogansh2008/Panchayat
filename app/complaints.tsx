@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Switch, ScrollView, Alert, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { ArrowLeft, UploadCloud } from 'lucide-react-native';
-import { addDocument, COLLECTIONS } from '../lib/firestore';
+import { submitComplaint } from '../backend/db/firestore';
+import { useAuth } from '../frontend/context/AuthContext';
 
 export default function NewComplaintScreen() {
   const router = useRouter();
@@ -11,19 +12,26 @@ export default function NewComplaintScreen() {
   const [isAnonymous, setIsAnonymous] = useState(false);
   const [loading, setLoading] = useState(false);
 
+  const { profile, user } = useAuth();
+  const societyId = profile?.societyId || '';
+
   const handleSubmit = async () => {
     if (!title || !desc) {
       Alert.alert('Error', 'Please fill in title and description');
       return;
     }
+    if (!societyId) {
+      Alert.alert('Error', 'No society linked to your account.');
+      return;
+    }
     setLoading(true);
     try {
-      await addDocument(COLLECTIONS.COMPLAINTS, {
+      await submitComplaint(societyId, {
         title,
         desc,
         anonymous: isAnonymous,
-        status: 'Open',
-        date: new Date().toLocaleDateString()
+        flatNo: profile?.flatNo || '',
+        userId: user?.uid || '',
       });
       Alert.alert('Success', 'Complaint registered successfully!');
       router.back();

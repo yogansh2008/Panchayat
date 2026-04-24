@@ -3,14 +3,14 @@ import {
   View, Text, StyleSheet, TouchableOpacity, Switch,
   ScrollView, FlatList, Alert, ActivityIndicator,
 } from 'react-native';
-import { useAuth } from '../context/AuthContext';
-import { auth } from '../lib/firebase';
+import { useAuth } from '../frontend/context/AuthContext';
+import { auth } from '../backend/config/firebase';
 import { User, Briefcase, Star, Clock, LogOut, CheckCircle, XCircle, Package } from 'lucide-react-native';
 import {
   subscribeToData, subscribeProviderRequests,
   updateProviderAvailability, acceptServiceRequest,
   completeServiceRequest, COLLECTIONS,
-} from '../lib/firestore';
+} from '../backend/db/firestore';
 
 export default function ServiceProviderScreen() {
   const { profile, user } = useAuth();

@@ -2,10 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { ArrowLeft, Megaphone, Save, Trash2 } from 'lucide-react-native';
-import { subscribeToData, addDocument, deleteDocument, COLLECTIONS } from '../lib/firestore';
+import { subscribeToNotices, postNotice, deleteNotice } from '../backend/db/firestore';
+import { useAuth } from '../frontend/context/AuthContext';
 
 export default function AdminNoticesScreen() {
   const router = useRouter();
+  const { profile } = useAuth();
+  const societyId = profile?.societyId || '';
   const [notices, setNotices] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [title, setTitle] = useState('');
@@ -13,26 +16,24 @@ export default function AdminNoticesScreen() {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    const unsub = subscribeToData(COLLECTIONS.NOTICES, (data) => {
+    if (!societyId) return;
+    const unsub = subscribeToNotices(societyId, (data) => {
       setNotices(data);
       setLoading(false);
     });
     return () => unsub();
-  }, []);
+  }, [societyId]);
 
   const handleCreate = async () => {
     if (!title || !desc) return Alert.alert('Required', 'Please fill title and message.');
+    if (!societyId) return Alert.alert('Error', 'No society linked.');
     setSaving(true);
     try {
-      await addDocument(COLLECTIONS.NOTICES, {
-        title,
-        desc,
-        date: new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }),
-      });
+      await postNotice(societyId, { title, desc });
       setTitle(''); setDesc('');
-      Alert.alert('Posted ✓', 'Notice broadcast to all residents.');
-    } catch {
-      Alert.alert('Error', 'Could not post notice.');
+      Alert.alert('✅ Posted', 'Notice broadcast to all residents.');
+    } catch (e: any) {
+      Alert.alert('Error', e.message || 'Could not post notice.');
     } finally {
       setSaving(false);
     }
@@ -41,7 +42,7 @@ export default function AdminNoticesScreen() {
   const handleDelete = (id: string) => {
     Alert.alert('Delete Notice', 'Remove this notice?', [
       { text: 'Cancel', style: 'cancel' },
-      { text: 'Delete', style: 'destructive', onPress: () => deleteDocument(COLLECTIONS.NOTICES, id) },
+      { text: 'Delete', style: 'destructive', onPress: () => deleteNotice(id) },
     ]);
   };
 

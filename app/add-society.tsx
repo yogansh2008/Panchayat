@@ -2,8 +2,8 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { ArrowLeft, Building, MapPin, Hash, Shield } from 'lucide-react-native';
-import { addDocument, COLLECTIONS } from '../lib/firestore';
-import { useAuth } from '../context/AuthContext';
+import { addDocument, createSociety, updateDocument, COLLECTIONS } from '../backend/db/firestore';
+import { useAuth } from '../frontend/context/AuthContext';
 
 export default function AddSocietyScreen() {
   const router = useRouter();
@@ -12,25 +12,32 @@ export default function AddSocietyScreen() {
 
   const [name, setName] = useState('');
   const [address, setAddress] = useState('');
-  const [code, setCode] = useState('');
   const [totalFlats, setTotalFlats] = useState('');
 
   const handleAddSociety = async () => {
-    if (!name || !address || !code) {
-      Alert.alert("Required", "Please fill Name, Address, and Code.");
+    if (!name || !address) {
+      Alert.alert("Required", "Please fill Name and Address.");
       return;
     }
     
     setLoading(true);
     try {
-      await addDocument(COLLECTIONS.SOCIETIES, {
-        name,
-        address,
-        code: code.toUpperCase(),
+      const society = await createSociety({
+        name: name.trim(),
+        address: address.trim(),
         totalFlats: parseInt(totalFlats) || 0,
         adminId: user?.uid || 'unknown'
       });
-      Alert.alert("Success", "New society successfully added to your management portfolio.");
+
+      // Update the current admin's societyId
+      if (user?.uid) {
+        await updateDocument(COLLECTIONS.USERS, user.uid, {
+          societyId: society.id,
+          societyCode: society.code,
+        });
+      }
+
+      Alert.alert("Success", `New society successfully added. Society Code: ${society.code}\nKeep this safe and share with residents.`);
       router.back();
     } catch (e) {
       Alert.alert("Error", "Could not add society. Try again.");
@@ -57,11 +64,6 @@ export default function AddSocietyScreen() {
         <View style={styles.inputGroup}>
           <MapPin color="#9ca3af" size={20} style={styles.icon} />
           <TextInput style={styles.input} placeholder="Full Address" value={address} onChangeText={setAddress} />
-        </View>
-
-        <View style={styles.inputGroup}>
-          <Shield color="#9ca3af" size={20} style={styles.icon} />
-          <TextInput style={styles.input} placeholder="Unique Access Code (e.g. GV123)" value={code} onChangeText={setCode} autoCapitalize="characters" />
         </View>
 
         <View style={styles.inputGroup}>

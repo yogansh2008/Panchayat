@@ -6,9 +6,9 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { Send, ArrowLeft, Bot } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
-import { askPanchayatAI } from '../lib/ai';
-import { fetchChatbotContext } from '../lib/firestore';
-import { useAuth } from '../context/AuthContext';
+import { askPanchayatAI } from '../backend/services/ai';
+import { fetchChatbotContext } from '../backend/db/firestore';
+import { useAuth } from '../frontend/context/AuthContext';
 
 interface Message {
   id: string;
@@ -46,8 +46,8 @@ export default function AIAssistantScreen() {
     setLoading(true);
 
     try {
-      // Fetch society-specific context based on user's society code
-      const context = await fetchChatbotContext(profile?.societyCode || '');
+      // Fetch society-specific context based on user's societyId
+      const context = await fetchChatbotContext(profile?.societyId || profile?.societyCode || '');
       const aiText = await askPanchayatAI(text, context);
       setMessages(prev => [...prev, { id: Date.now().toString() + '_ai', text: aiText, sender: 'ai' }]);
     } catch (e: any) {

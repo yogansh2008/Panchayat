@@ -2,12 +2,17 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { ArrowLeft, UserPlus, Shield, User } from 'lucide-react-native';
-import { subscribeToData, addDocument, COLLECTIONS } from '../lib/firestore';
+import { subscribeToData, addDocument, COLLECTIONS } from '../backend/db/firestore';
+import { useAuth } from '../frontend/context/AuthContext';
 
 export default function AdminResidentsScreen() {
   const router = useRouter();
   const [residents, setResidents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const { profile } = useAuth();
+  const societyId = profile?.societyId || '';
+  const societyCode = profile?.societyCode || '';
 
   // Form
   const [name, setName] = useState('');
@@ -15,20 +20,25 @@ export default function AdminResidentsScreen() {
   const [email, setEmail] = useState('');
 
   useEffect(() => {
+    if (!societyId) { setLoading(false); return; }
     const unsub = subscribeToData(COLLECTIONS.USERS, (data) => {
       setResidents(data.filter(u => u.role === 'Resident'));
       setLoading(false);
-    });
+    }, [{ field: 'societyId', op: '==', value: societyId }]);
     return () => unsub();
-  }, []);
+  }, [societyId]);
 
   const handleCreate = async () => {
     if (!name || !flat) {
       Alert.alert('Required', 'Name and Flat are required');
       return;
     }
+    if (!societyId) return;
     try {
-      await addDocument(COLLECTIONS.USERS, { name, flatNo: flat, email, role: 'Resident', status: 'Approved' });
+      await addDocument(COLLECTIONS.USERS, {
+        name, flatNo: flat, email, role: 'Resident', status: 'Approved',
+        societyId, societyCode
+      });
       setName(''); setFlat(''); setEmail('');
       Alert.alert('Success', 'Resident added manually.');
     } catch (e) {
