@@ -56,4 +56,5 @@ AppData/
 
 # OS
 .DS_Store
+.env
 Thumbs.db
