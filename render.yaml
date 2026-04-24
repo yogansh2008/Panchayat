@@ -8,3 +8,12 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
+
+  - type: web
+    name: panchayat-frontend
+    env: static
+    buildCommand: npm install && npx expo export -p web
+    staticPublishPath: dist
+    envVars:
+      - key: EXPO_PUBLIC_GEMINI_API_KEY
+        value: "add_your_key_in_render_dashboard"
